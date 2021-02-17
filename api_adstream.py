@@ -97,15 +97,17 @@ def upload_media(**upload_params):
 
     auth = getauth.get_auth()
 
-    test_mov = Path(media_path, 'test-02.mov')
-    url = upload_params["url"]
+    media_path = upload_params["media_path"]
     filename = upload_params["filename"]
+
+    media = Path(media_path)
+    url = upload_params["url"]
     fileId = upload_params["fileId"]
     storageId = upload_params["storageId"]
     folderId = upload_params["folderId"]
     headers = {"Authorization": auth}
 
-    with open(test_mov, 'rb') as f:
+    with open(media, 'rb') as f:
         r = requests.put(url, files={filename: f})
         response = r.text
         status_code = r.status_code
