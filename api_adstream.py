@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import pprint
 import requests
@@ -14,8 +15,11 @@ import get_authentication as getauth
 
 
 config = cfg.get_config()
-json_path = config['paths']['json_path']
-media_path = config['paths']['media_path']
+# json_path = config['paths']['json_path']
+# media_path = config['paths']['media_path']
+root_folderId = config['Adstream']['NatGeoPromoExchange']
+
+logger = logging.getLogger(__name__)
 
 
 def new_media_creation(adstream_upload_list):
@@ -26,6 +30,9 @@ def new_media_creation(adstream_upload_list):
     3 - POST request - complete the media creation with a put request. 
 
     """
+
+    adstream_start_msg = f"\n ============== Starting media upload to Adstream =================\n"
+    logger.info(adstream_start_msg)
 
     for media in adstream_upload_list: 
         registered_media = register_media(media["File Name"])
@@ -51,9 +58,9 @@ def new_media_creation(adstream_upload_list):
                         "folderId": folderId,
                         }
 
-        print(f"============ UPLOAD PARAMS =========== \n\
+        upload_params_msg = f"============ AdStream UPLOAD PARAMS =========== \n\
             upload_params={{\n\
-                    media_path: {media_path},\n\
+                    media_path: {filepath},\n\
                     fileId: {fileId},\n\
                     url: {url},\n\
                     reference: {reference},\n\
@@ -62,11 +69,15 @@ def new_media_creation(adstream_upload_list):
                     filename: {filename},\n\
                     folderId: {folderId},\n\
                 }}"
-        )
+        logger.info(upload_params_msg)
 
         media_params = upload_media(**upload_params)
         media_complete(**media_params)
-        print("============ NEW MEDIA CREATION COMPLETE =========== \n")
+
+        media_complete_msg = f"{filename} now available in the adstream web interface."
+        logger.info(media_complete_msg)
+
+    return
 
 
 def register_media(filename):
@@ -74,26 +85,35 @@ def register_media(filename):
     POST request to register a placeholder for new media. 
     """
 
-    print("========== BEGIN REGISTER MEDIA ============\n")
+    try: 
+        register_media_msg = f"Registering new media placeholder for:  {filename}"
+        logger.info(register_media_msg)
 
-    auth = getauth.get_auth()
-    folderId = "5ff36b0746e0fb00010ef4b5"
-    url_register_media = f"https://a5.adstream.com/api/v2/folders/{folderId}/media"
+        auth = getauth.get_auth()
+        folderId = root_folderId
+        # folderId = "5ff36b0746e0fb00010ef4b5"
+        url_register_media = f"https://a5.adstream.com/api/v2/folders/{folderId}/media"
+        
+        json = {"filename" : filename}
+        headers = {"Authorization": auth}
+        r = requests.post(url_register_media, headers=headers, json=json)
+        response = r.json()
+        
+        rsp_sucess_msg = f"Resgister media sucessful for: {filename}"
+        logger.info(rsp_sucess_msg)
+
+        return response
     
-    json = {"filename" : filename}
-    headers = {"Authorization": auth}
-    r = requests.post(url_register_media, headers=headers, json=json)
-    response = r.json()
-    print(response)
-    return response
+    except Exception as e:
+            reg_err_msg = f"Exception on Register Media for {filename}: \n {e}"
+            logger.error(reg_err_msg)
+            return
 
 
 def upload_media(**upload_params):
     """
     PUT request to upload the media file to the AdStream platform. 
     """
-
-    print("========== BEGIN MEDIA UPLOAD ============\n")
 
     auth = getauth.get_auth()
 
@@ -107,20 +127,30 @@ def upload_media(**upload_params):
     folderId = upload_params["folderId"]
     headers = {"Authorization": auth}
 
-    with open(media, 'rb') as f:
-        r = requests.put(url, files={filename: f})
-        response = r.text
-        status_code = r.status_code
-        encoding = r.encoding
+    media_upload_msg = f"begin media upload for: {filename}"
+    logger.info(media_upload_msg)
 
-        print(f"encoding: {encoding}")
-        print(f"status_code:  {status_code}")
-        print(f"post response:  {response}")
+    try: 
+        with open(media, 'rb') as f:
+            r = requests.put(url, files={filename: f})
+            response = r.text
+            status_code = r.status_code
+            encoding = r.encoding
 
-    media_params = {"filename" : filename, "folderId": folderId, "storageId": storageId, "fileId": fileId}
+        upload_params = {"filename" : filename, "folderId": folderId, "storageId": storageId, "fileId": fileId}
+        
+        upload_complete_msg = f"Uplaod to adstream complete for: {filename}"
+        upload_params_msg = f"Media params for {filename}: \n {upload_params}"
+        logger.info(upload_complete_msg)
+        logger.info(upload_params_msg)
+
+        return upload_params
     
-    print("==========  MEDIA UPLOAD COMPLETE ============ \n ")
-    return media_params
+    except Exception as e: 
+            upload_err_msg = f"Exception on the Media upload for {filename}: \n {e}"
+            logger.error(upload_err_msg)
+            return
+
 
 
 def media_complete(**media_params ):
@@ -128,15 +158,15 @@ def media_complete(**media_params ):
     POST request to complete the addition of new media file to Adstream platform. 
     """
 
-    print("========== BEGIN ""MEDIA COMPLETE"" ============\n")
-
     auth = getauth.get_auth()
 
-    print(media_params)
     folderId = media_params["folderId"]
     fileId = media_params["fileId"]
     filename = media_params["filename"]
     storageId = media_params["storageId"]
+
+    start_media_compelete_msg = f"Starting the ""media compeletion"" step for {fileanme}"
+    logger.info(start_media_compelete_msg)
 
     url_media_complete = f"https://a5.adstream.com/api/v2/folders/{folderId}/media/{fileId}"
     
@@ -156,9 +186,8 @@ def media_complete(**media_params ):
     response = r.json()
     encoding = r.encoding
 
-    print(f"encoding: {encoding}")
-    print(f"status_code:  {status_code}")
-    print(f"post response:  {response}")
+    end_media_complete_msg = f"post response for media complete request: \n {response}"
+    logger.info(end_media_complete_msg)
 
     return
 
@@ -283,24 +312,6 @@ def get_projects():
 
         projects_file.close()
 
-        # except requests.exceptions.RequestException as e:
-        #     raise SystemExit(e)
-
-        # print(f"SIGNATURE: {signature}")
-        # print(f"HASH-DECODE: {hash_decode}")
-        # print(f'TOKEN: {token}')
-        # print(f"HEADERS: {headers}")
-        # print("")
-        # print(f"URL:  {r.url}")
-        # print("")
-        # print(r.request.headers)
-        # print("")
-        # print(r.request.body)
-        # print("")
-        # print(r.headers)
-        # print("")
-        # pprint.pprint(r.json())
-
     print("GET PROJECTS DONE")
     return
 
@@ -395,8 +406,6 @@ def create_project_folder():
         raise SystemExit(e)
 
     return
-
-
 
 
 
