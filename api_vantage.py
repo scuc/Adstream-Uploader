@@ -111,6 +111,8 @@ def get_job_variabes(job_id):
     vars = response["Labels"][0]["Params"]
 
     kv_dict = {}
+    kv_dict.update({"Job Id": job_id})
+
     for x in vars:
         name = x["Name"]
         value = x["Value"]
@@ -132,6 +134,7 @@ def create_media_dict(media_upload_list):
 
     for d in media_upload_list: 
 
+        job_id  = d["Job Id"]
         path = PureWindowsPath(d["File Path"])
         folder = str(path.parent).rsplit('\\', 1)[-1]
         folderId = adstream_folders[folder]
@@ -146,6 +149,7 @@ def create_media_dict(media_upload_list):
 
         media_dict.update(
                             {
+                            "Job Id": job_id,
                             "folderId": folderId, 
                             "File Name": filename, 
                             "File Path": path,
@@ -157,7 +161,6 @@ def create_media_dict(media_upload_list):
     logger.info(media_upload_dict_msg)
 
     return media_dict
-
 
 
 
