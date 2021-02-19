@@ -80,17 +80,26 @@ def main():
     if len(adstream_upload_list) != 0: 
 
         api_a.new_media_creation(adstream_upload_list)
+        complete_msg()
     
     else: 
+        complete_msg()
 
-        date_end = str(strftime('%A, %d. %B %Y %I:%M%p', localtime()))
 
-        complete_msg = f"\n\
-        ================================================================================\n\
-                    Adstream Upload - Complete - {date_end} \n\
-        ================================================================================\n\
-        "
-        logger.info(complete_msg)
+    
+def complete_msg():
+
+    date_end = str(strftime('%A, %d. %B %Y %I:%M%p', localtime()))
+
+    complete_msg = f"\n\
+    ================================================================================\n\
+                Adstream Upload - Complete - {date_end} \n\
+    ================================================================================\n\
+    "
+    logger.info(complete_msg)
+
+    return
+    
 
     # api_a.get_project(projectId)
     # api_a.get_projects()
