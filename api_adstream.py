@@ -37,49 +37,65 @@ def new_media_creation(adstream_upload_list):
     adstream_list_msg = f"\n  ============ AdStream NEW MEDIA LIST ===========:\n {adstream_upload_list} \n"
     logger.info(adstream_list_msg)
 
-    for media in adstream_upload_list: 
+    for media in adstream_upload_list:
         vantage_job_id = media["Job Id"]
         registered_media = register_media(media["File Name"], vantage_job_id)
 
-        fileId = registered_media[0]["id"]
-        url = registered_media[0]["url"]
-        reference = registered_media[0]["reference"]
-        storageId = registered_media[0]["storageId"]
-        status = registered_media[0]["status"]
-        filename = registered_media[0]["filename"]
-        
-        filepath = media["File Path"]
-        folderId = media["folderId"]
+        if registered_media != None:
+            fileId = registered_media[0]["id"]
+            url = registered_media[0]["url"]
+            reference = registered_media[0]["reference"]
+            storageId = registered_media[0]["storageId"]
+            status = registered_media[0]["status"]
+            filename = registered_media[0]["filename"]
 
-        upload_params = {
-                        "media_path": filepath, 
-                        "fileId": fileId, 
-                        "url": url, 
-                        "reference": reference, 
-                        "storageId": storageId, 
-                        "status": status, 
-                        "filename": filename,
-                        "folderId": folderId,
-                        }
+            filepath = media["File Path"]
+            folderId = media["folderId"]
 
-        upload_params_msg = f"\n \n ============ AdStream UPLOAD PARAMS =========== \n\
-            upload_params={{\n\
-                        media_path: {filepath},\n\
-                        fileId: {fileId},\n\
-                        url: {url},\n\
-                        reference: {reference},\n\
-                        storageId: {storageId},\n\
-                        status: {status},\n\
-                        filename: {filename},\n\
-                        folderId: {folderId},\n\
-                     }}"
-        logger.info(upload_params_msg)
+            upload_params = {
+                "media_path": filepath,
+                "fileId": fileId,
+                "url": url,
+                "reference": reference,
+                "storageId": storageId,
+                "status": status,
+                "filename": filename,
+                "folderId": folderId,
+            }
+
+            upload_params_msg = f"\n \n ============ AdStream UPLOAD PARAMS =========== \n\
+                upload_params={{\n\
+                            media_path: {filepath},\n\
+                            fileId: {fileId},\n\
+                            url: {url},\n\
+                            reference: {reference},\n\
+                            storageId: {storageId},\n\
+                            status: {status},\n\
+                            filename: {filename},\n\
+                            folderId: {folderId},\n\
+                        }}"
+            logger.info(upload_params_msg)
+        else:
+            media_register_err_msg = f"Media Registration ERROR for {vantage_job_id}, moving to next."
+            logger.error(media_register_err_msg)
+            continue
 
         media_params = upload_media(vantage_job_id, **upload_params)
-        media_complete(vantage_job_id, **media_params)
 
-        media_complete_msg = f"{filename} now available in the adstream web interface."
-        logger.info(media_complete_msg)
+        if media_params != None:
+            media_finish = media_complete(vantage_job_id, **media_params)
+        else:
+            media_upload_err_msg = f"Media Upload ERROR for {vantage_job_id}, moving to next upload."
+            logger.error(media_upload_err_msg)
+            continue
+
+        if media_finish != None:
+            media_complete_msg = f"{filename} now available in the adstream web interface."
+            logger.info(media_complete_msg)
+        else:
+            media_complete_err_msg = f"Media completetion ERROR for {vantage_job_id}, moving to next."
+            logger.error(media_complete_err_msg)
+            continue
 
     return
 
@@ -89,29 +105,29 @@ def register_media(filename, vantage_job_id):
     POST request to register a placeholder for new media. 
     """
 
-    try: 
+    try:
         register_media_msg = f"Registering new media placeholder for:  {filename}"
         logger.info(register_media_msg)
 
         auth = getauth.get_auth()
         folderId = root_folderId
         url_register_media = f"https://a5.adstream.com/api/v2/folders/{folderId}/media"
-        
-        json = {"filename" : filename}
+
+        json = {"filename": filename}
         headers = {"Authorization": auth}
         r = requests.post(url_register_media, headers=headers, json=json)
         response = r.json()
-        
+
         rsp_sucess_msg = f"Resgister media sucessful for: {filename}"
         logger.info(rsp_sucess_msg)
 
         return response
-    
+
     except Exception as e:
-            reg_err_msg = f"Exception on Register Media step for {filename}: \n {e}"
+            reg_err_msg = f"Exception on Register Media step for {filename} \n {e}"
             logger.error(reg_err_msg)
             cleanup_media_fail(vantage_job_id)
-            return
+            return None
 
 
 def upload_media(vantage_job_id, **upload_params):
@@ -134,27 +150,28 @@ def upload_media(vantage_job_id, **upload_params):
     media_upload_msg = f"bBgin media upload for: {filename}"
     logger.info(media_upload_msg)
 
-    try: 
+    try:
         with open(media, 'rb') as f:
             r = requests.put(url, files={filename: f})
             response = r.text
             status_code = r.status_code
             encoding = r.encoding
 
-        upload_params = {"filename" : filename, "folderId": folderId, "storageId": storageId, "fileId": fileId}
-        
+        upload_params = {"filename": filename, "folderId": folderId,
+                         "storageId": storageId, "fileId": fileId}
+
         upload_complete_msg = f"Uplaod to adstream complete for: {filename}"
         upload_params_msg = f"Media params for {filename}: \n {upload_params}"
         logger.info(upload_complete_msg)
         logger.info(upload_params_msg)
 
         return upload_params
-    
-    except Exception as e: 
+
+    except Exception as e:
             upload_err_msg = f"Exception on the Media Upload step for {filename}: \n {e}"
             logger.error(upload_err_msg)
             cleanup_media_fail(vantage_job_id)
-            return
+            return None
 
 
 def media_complete(vantage_job_id, **media_params):
@@ -172,9 +189,9 @@ def media_complete(vantage_job_id, **media_params):
     start_media_compelete_msg = f"Starting the ""media compeletion"" step for {fileanme}"
     logger.info(start_media_compelete_msg)
 
-    try: 
+    try:
         url_media_complete = f"https://a5.adstream.com/api/v2/folders/{folderId}/media/{fileId}"
-        
+
         json = {
             "meta": {
                 "common": {
@@ -186,32 +203,43 @@ def media_complete(vantage_job_id, **media_params):
 
         headers = {"Authorization": auth}
         params = {'fileId': fileId, "folderId": folderId}
-        r = requests.post(url_media_complete, headers=headers, json=json, params = params)
+        r = requests.post(url_media_complete, headers=headers,
+                          json=json, params=params)
         status_code = r.status_code
         response = r.json()
         encoding = r.encoding
 
         end_media_complete_msg = f"post response for media complete request: \n {response}"
         logger.info(end_media_complete_msg)
+        media_finish = True
 
-        return
+        return media_finish
 
     except Exception as e:
         upload_err_msg = f"Exception on the Media Complete step for {filename}: \n {e}"
         logger.error(upload_err_msg)
         cleanup_media_fail(vantage_job_id)
-        return
+        return None
 
 
 def cleanup_media_fail(vantage_job_id):
     """
     CleanUp of the JobID List if the Adstream media creation fails. 
     """
+    media_cleanup_msg = f"Starting Job ID clean up for - {vantage_job_id}"
+    logger.info(media_cleanup_msg)
     edited_id = f"{vantage_job_id[:8]}-XXXX-XXXX-XXXX-{vantage_job_id[-12:]}"
-    with open("job_id_list.txt", "w+") as f: 
+    with open("job_id_list.txt", "w+") as f:
         contents = f.readlines()
-        contents.replace(vantage_job_id, f"[ Adstream Upload Failed for jobid: {edited_id} ]")
-        f.write(contents)
+        for line in contents:
+            if vantage_job_id in line:
+                line.replace(
+                    vantage_job_id, f"[ Adstream Upload Failed for jobid: {edited_id} ]")
+                f.write(contents)
+                cleanup_msg = f"Adstream Media Creation Failure - Vantage Job ID: {vantage_job_id} removed from the job_id_list."
+                logger.info(cleanup_msg)
+            else:
+                continue
         f.close
     return
 
@@ -235,12 +263,11 @@ def get_folder(folderId):
 def get_folders():
 
     url = "https://a5.adstream.com/api/v2/folders"
-    
+
     os.chdir(json_path)
     epoch = str(round(time.time()))
     filename = "adstream_folders_" + epoch + ".json"
     page_num = 1
-
 
     while True:
         auth = getauth.get_auth()
@@ -253,7 +280,7 @@ def get_folders():
         r = requests.get(url, headers=headers, params=params)
         response = r.json()
         print(response)
-        
+
         with open(filename, "a+") as folders_file:
             if response == []:
                 print("BREAK")
@@ -430,7 +457,6 @@ def create_project_folder():
         raise SystemExit(e)
 
     return
-
 
 
 if __name__ == '__main__':
