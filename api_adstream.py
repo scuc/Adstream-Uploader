@@ -1,4 +1,5 @@
 import base64
+import datetime
 import hashlib
 import hmac
 import json
@@ -9,6 +10,7 @@ import requests
 import time
 
 from pathlib import Path
+from time import localtime, strftime
 
 import config as cfg
 import get_authentication as getauth
@@ -228,20 +230,23 @@ def cleanup_media_fail(vantage_job_id):
     """
     media_cleanup_msg = f"Starting Job ID clean up for - {vantage_job_id}"
     logger.info(media_cleanup_msg)
-    edited_id = f"{vantage_job_id[:8]}-XXXX-XXXX-XXXX-{vantage_job_id[-12:]}"
-    with open("job_id_list.txt", "w+") as f:
+
+    with open("job_id_list.txt", "rt+") as f:
         contents = f.readlines()
+        f.close
+    with open("job_id_list.txt", "wt+") as f:
         for line in contents:
-            if vantage_job_id in line:
-                line.replace(
-                    vantage_job_id, f"[ Adstream Upload Failed for jobid: {edited_id} ]")
-                f.write(contents)
+            if line.strip("\n") != vantage_job_id:
+                f.write(line)
+            else:
+                timenow = datetime.datetime.today()
+                timestamp = timenow.strftime("%Y-%m-%d, %H:%M:%S"),
+                new_line = line.replace(
+                    vantage_job_id, f"[ {timestamp} - Upload Failed for jobid: {vantage_job_id} ]\n")
+                f.write(new_line)
                 cleanup_msg = f"Adstream Media Creation Failure - Vantage Job ID: {vantage_job_id} removed from the job_id_list."
                 logger.info(cleanup_msg)
-            else:
-                continue
         f.close
-    return
 
 
 # ===================== API Actions - UNUSED ======================= #
