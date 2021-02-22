@@ -21,12 +21,11 @@ endpoint_list = config["vantage"]["endpoint_list"]
 adstream_folders = config["Adstream"]
 
 
-
-def check_workflows(workflow): 
+def check_workflows(workflow):
     """
     Vantage REST api calls to check workflows for new media and pull variables from jobs.
     """
-    
+
     media_upload_list = []
 
     api_endpoint = get_endpoint()
@@ -35,7 +34,7 @@ def check_workflows(workflow):
 
     workflow_endpoint = f"{root_uri}/Rest/workflows/{workflow}/jobs"
     workflow_job_object = requests.get(workflow_endpoint)
-    
+
     workflow_json = workflow_job_object.json()
 
     jobs_list = workflow_json["Jobs"]
@@ -46,14 +45,14 @@ def check_workflows(workflow):
 
     adstream_upload_list = []
 
-    for job in jobs_list: 
+    for job in jobs_list:
 
         job_id = check_jobs(job)
         job_msg = f"Checking Vantage job: {job_id}"
         logger.info(job_msg)
 
-        if ( job_id is not None
-            and job_id != "[]" ): 
+        if (job_id is not None
+                and job_id != "[]"):
 
             kv_dict = get_job_variabes(job_id)
             media_upload_list.append((kv_dict))
@@ -80,17 +79,20 @@ def check_jobs(job):
     logger.info(check_job_msg)
     logger.info(job_state_msg)
 
-
     with open("job_id_list.txt", "r+") as f:
         contents = f.readlines()
-        match = re.search(job_id, " ".join(contents))
+        failed_job_text = f"Upload Failed for job id: {job_id}"
 
-        if match != None: 
+        job_id_match = re.search(job_id, " ".join(contents))
+        upload_failed_match = re.search(failed_job_text, " ".join(contents))
+
+        if (job_id_match != None
+                and upload_failed_match == None):
             job_match_msg = f"Job ID {job_id} already exists in the job list.txt, setting job_id to None"
             logger.info(job_match_msg)
             job_id = None
         else:
-            f.write(f"{job_id}, \n")
+            f.write(f"{job_id}\n")
             job_match_msg = f"Job ID {job_id} does not exist in the job list.txt, return id for processing."
             logger.info(job_match_msg)
 
@@ -116,7 +118,7 @@ def get_job_variabes(job_id):
     for x in vars:
         name = x["Name"]
         value = x["Value"]
-        kv_dict.update({name:value})
+        kv_dict.update({name: value})
 
     job_dict_msg = f"Variables for Job ID {job_id}:  {kv_dict}"
     logger.info(job_dict_msg)
@@ -132,9 +134,9 @@ def create_media_dict(media_upload_list):
 
     media_dict = {}
 
-    for d in media_upload_list: 
+    for d in media_upload_list:
 
-        job_id  = d["Job Id"]
+        job_id = d["Job Id"]
         path = PureWindowsPath(d["File Path"])
         folder = str(path.parent).rsplit('\\', 1)[-1]
         folderId = adstream_folders[folder]
@@ -144,24 +146,23 @@ def create_media_dict(media_upload_list):
             tmp_path = d["File Path"].replace("T:\\", "/Volumes/Quantum2/")
             tmp_path2 = tmp_path.replace("\\", "/")
             path = PurePosixPath(tmp_path2)
-        else: 
+        else:
             path = PureWindowsPath(d["File Path"])
 
         media_dict.update(
-                            {
-                            "Job Id": job_id,
-                            "folderId": folderId, 
-                            "File Name": filename, 
-                            "File Path": path,
-                            }
-                        )
+            {
+                "Job Id": job_id,
+                "folderId": folderId,
+                "File Name": filename,
+                "File Path": path,
+            }
+        )
 
     media_upload_dict_msg = f"Media dict for adstream:  \n\
         {media_dict}"
     logger.info(media_upload_dict_msg)
 
     return media_dict
-
 
 
 # ===================== API ENPOINTS CHECKS ======================= #
