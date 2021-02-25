@@ -46,18 +46,24 @@ def check_workflows(workflow):
     adstream_upload_list = []
 
     for job in jobs_list:
+        if job["Name"] == "_Info for AdStream Uploads":
+            continue
 
-        job_id = check_jobs(job)
-        job_msg = f"Checking Vantage job: {job_id}"
-        logger.info(job_msg)
+        else:
+            job_id = check_jobs(job)
+            job_msg = f"Checking Vantage job: {job_id}"
+            logger.info(job_msg)
 
         if (job_id is not None
                 and job_id != "[]"):
 
             kv_dict = get_job_variabes(job_id)
-            media_upload_list.append((kv_dict))
-            media_dict = create_media_dict(media_upload_list)
-            adstream_upload_list.append(media_dict)
+            if kv_dict != {}:
+                media_upload_list.append((kv_dict))
+                media_dict = create_media_dict(media_upload_list)
+                adstream_upload_list.append(media_dict)
+            else:
+                continue
         else:
             dup_job_msg = f"Job ID: {job_id} is a duplicate, skipping"
             logger.info(dup_job_msg)
@@ -86,6 +92,9 @@ def check_jobs(job):
         job_id_match = re.search(job_id, " ".join(contents))
         upload_failed_match = re.search(failed_job_text, " ".join(contents))
 
+        print(
+            f"============== JOB FAILED MATCH:  {upload_failed_match}  ==============")
+
         if (job_id_match != None
                 and upload_failed_match == None):
             job_match_msg = f"Job ID {job_id} already exists in the job list.txt, setting job_id to None"
@@ -110,18 +119,26 @@ def get_job_variabes(job_id):
     output_endpoint = f"{root_uri}/Rest/jobs/{job_id}/outputs"
     r = requests.get(output_endpoint)
     response = r.json()
-    vars = response["Labels"][0]["Params"]
+    print(f"================== RESPONSE: {response} ============= ")
+    if response["Labels"] != []:
 
-    kv_dict = {}
-    kv_dict.update({"Job Id": job_id})
+        vars = response["Labels"][0]["Params"]
 
-    for x in vars:
-        name = x["Name"]
-        value = x["Value"]
-        kv_dict.update({name: value})
+        kv_dict = {}
+        kv_dict.update({"Job Id": job_id})
 
-    job_dict_msg = f"Variables for Job ID {job_id}:  {kv_dict}"
-    logger.info(job_dict_msg)
+        for x in vars:
+            name = x["Name"]
+            value = x["Value"]
+            kv_dict.update({name: value})
+
+        job_dict_msg = f"Variables for Job ID {job_id}:  {kv_dict}"
+        logger.info(job_dict_msg)
+
+    else:
+        kv_dict = {}
+        job_dict_msg = f"Variables for Job ID {job_id} are empty, returning empty dict {{}}"
+        logger.info(job_dict_msg)
 
     return kv_dict
 
@@ -139,8 +156,13 @@ def create_media_dict(media_upload_list):
         job_id = d["Job Id"]
         path = PureWindowsPath(d["File Path"])
         folder = str(path.parent).rsplit('\\', 1)[-1]
-        folderId = adstream_folders[folder]
-        filename = d["File Name"]
+
+        if folder != "_DeployToAdStream":
+
+            folderId = adstream_folders[folder]
+            filename = d["File Name"]
+        else:
+            continue
 
         if platform == "darwin":
             tmp_path = d["File Path"].replace("T:\\", "/Volumes/Quantum2/")
@@ -181,7 +203,7 @@ def get_endpoint():
                 logger.error(endpoint_status_msg)
                 continue
             else:
-                endpoint_status_msg = f"\n\n{endpoint.upper()} online status is confirmed.\n"
+                endpoint_status_msg = f"{endpoint.upper()} online status is confirmed."
                 logger.info(endpoint_status_msg)
                 return endpoint
 
