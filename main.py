@@ -79,23 +79,29 @@ def main():
 
     if len(adstream_upload_list) != 0: 
 
-        api_a.new_media_creation(adstream_upload_list)
-        complete_msg()
+        media_summary = api_a.new_media_creation(adstream_upload_list)
+        complete_msg(media_summary)
     
     else: 
         complete_msg()
 
 
     
-def complete_msg():
+def complete_msg(media_summary):
 
     date_end = str(strftime('%A, %d. %B %Y %I:%M%p', localtime()))
+    uploaded_files = media_summary["Uploaded Files"]
+    failed_uploads = media_summary["Failed Uploads"]
 
     complete_msg = f"\n\
     ================================================================================\n\
                 Adstream Upload - Complete - {date_end} \n\
     ================================================================================\n\
+            Media Uploaded to Adstream: {uploaded_files}\n\
+            Media Failed to Upload: {failed_uploads}\n\
+    ================================================================================\n\
     "
+
     logger.info(complete_msg)
 
     return

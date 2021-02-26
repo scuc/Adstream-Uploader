@@ -39,8 +39,10 @@ def new_media_creation(adstream_upload_list):
     adstream_list_msg = f"\n  ============ AdStream NEW MEDIA LIST ===========:\n {adstream_upload_list} \n"
     logger.info(adstream_list_msg)
 
+    media_summary = {"Uploaded Files": [], "Failed Uploads": []}
+
     for media in adstream_upload_list:
-        # Have to pause between uploads or else adstream gives 10054 error
+        # Short pause between uploads so Adstream does not think script is a DOS attack.
         time.sleep(30)
 
         if media == {}:
@@ -99,14 +101,16 @@ def new_media_creation(adstream_upload_list):
             continue
 
         if media_finish != None:
+            media_summary["Uploaded Files"].append(filename)
             media_complete_msg = f"{filename} now available in the adstream web interface."
             logger.info(media_complete_msg)
         else:
+            media_summary["Failed Uploads"].append(filename)
             media_complete_err_msg = f"Media completetion ERROR for {vantage_job_id}, moving to next."
             logger.error(media_complete_err_msg)
             continue
 
-    return
+    return media_summary
 
 
 def register_media(filename, vantage_job_id):
