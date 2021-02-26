@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 workflow = config["vantage"]["workflow_list"]["_Info for AdStream Uploads"]
 endpoint_list = config["vantage"]["endpoint_list"]
 adstream_folders = config["Adstream"]
+root_unc = config["paths"]["root_unc"]
+root_letter = config["paths"]["root_letter"]
 
 
 def check_workflows(workflow):
@@ -55,9 +57,10 @@ def check_workflows(workflow):
             logger.info(job_msg)
 
         if (job_id is not None
-            and job_id != "[]"):
+                and job_id != "[]"):
 
             kv_dict = get_job_variabes(job_id)
+
             if kv_dict != {}:
                 media_upload_list.append((kv_dict))
                 media_dict = create_media_dict(media_upload_list)
@@ -80,26 +83,31 @@ def check_jobs(job):
     job_id = job["Identifier"]
     job_state = job["State"]
 
-    check_job_msg = f"checking job: {job_id}"
-    job_state_msg = f"job state: {job_state}"
-    logger.info(check_job_msg)
-    logger.info(job_state_msg)
+    if job_state == 5:
+        check_job_msg = f"checking job: {job_id}"
+        job_state_msg = f"job state: {job_state}"
+        logger.info(check_job_msg)
+        logger.info(job_state_msg)
+    else:
+        job_id = None
+        return job_id
 
     with open("job_id_list.txt", "r+") as f:
         contents = f.readlines()
         failed_job_text = f"Upload Failed for job id: {job_id}"
+        job_list_contents = " ".join(contents)
 
-        job_id_match = re.search(job_id, " ".join(contents))
-        upload_failed_match = re.search(failed_job_text, " ".join(contents))
+        job_id_match = re.search(job_id, job_list_contents)
+        upload_failed_match = re.search(failed_job_text, job_list_contents)
 
         if (job_id_match != None
-            and upload_failed_match == None):
+                and upload_failed_match == None):
             job_match_msg = f"Job ID {job_id} already exists in the job list.txt, setting job_id to None"
             logger.info(job_match_msg)
             job_id = None
         else:
             f.write(f"{job_id}\n")
-            job_match_msg = f"Job ID {job_id} does not exist in the job list.txt, return id for processing."
+            job_match_msg = f"Job ID {job_id} - does not exist in the job list.txt, orprevious upload attempta failed, return id for processing."
             logger.info(job_match_msg)
 
         f.close()
@@ -151,7 +159,9 @@ def create_media_dict(media_upload_list):
     for d in media_upload_list:
 
         job_id = d["Job Id"]
-        path = PureWindowsPath(d["File Path"])
+        letter_path = d["File Path"]
+        unc_path = letter_path.replace(root_letter, root_unc)
+        path = PureWindowsPath(unc_path)
         folder = str(path.parent).rsplit('\\', 1)[-1]
 
         if folder != "_DeployToAdStream":
@@ -166,7 +176,7 @@ def create_media_dict(media_upload_list):
             tmp_path2 = tmp_path.replace("\\", "/")
             path = PurePosixPath(tmp_path2)
         else:
-            path = PureWindowsPath(d["File Path"])
+            path = PureWindowsPath(path)
 
         media_dict.update(
             {
