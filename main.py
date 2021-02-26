@@ -44,7 +44,7 @@ def set_logger():
                                                 extension)
                 config["handlers"][i]["filename"] = log_filename
             else:
-                print("+++++++++++++++ LOG FILE ERROR ++++++++++++++++")
+                print("+++++++++++++++ ERROR STARTING LOG FILE ++++++++++++++++")
 
         logger = logging.config.dictConfig(config)
 

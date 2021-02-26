@@ -55,7 +55,7 @@ def check_workflows(workflow):
             logger.info(job_msg)
 
         if (job_id is not None
-                and job_id != "[]"):
+            and job_id != "[]"):
 
             kv_dict = get_job_variabes(job_id)
             if kv_dict != {}:
@@ -92,11 +92,8 @@ def check_jobs(job):
         job_id_match = re.search(job_id, " ".join(contents))
         upload_failed_match = re.search(failed_job_text, " ".join(contents))
 
-        print(
-            f"============== JOB FAILED MATCH:  {upload_failed_match}  ==============")
-
         if (job_id_match != None
-                and upload_failed_match == None):
+            and upload_failed_match == None):
             job_match_msg = f"Job ID {job_id} already exists in the job list.txt, setting job_id to None"
             logger.info(job_match_msg)
             job_id = None

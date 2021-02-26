@@ -154,7 +154,7 @@ def upload_media(vantage_job_id, **upload_params):
     folderId = upload_params["folderId"]
     headers = {"Authorization": auth}
 
-    media_upload_msg = f"bBgin media upload for: {filename}"
+    media_upload_msg = f"Begin media upload for: {filename}"
     logger.info(media_upload_msg)
 
     try: 
@@ -233,11 +233,9 @@ def cleanup_media_fail(vantage_job_id):
     """
     media_cleanup_msg = f"Starting Job ID clean up for - {vantage_job_id}"
     logger.info(media_cleanup_msg)
-    # edited_id = f"{vantage_job_id[:8]}-XXXX-XXXX-XXXX-{vantage_job_id[-12:]}"
-    # print(edited_id)
+    
     with open("job_id_list.txt", "rt+") as f: 
         contents = f.readlines()
-        print(contents)
         f.close
     with open("job_id_list.txt", "wt+") as f:
         for line in contents: 
