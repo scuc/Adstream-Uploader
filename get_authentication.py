@@ -1,7 +1,7 @@
+#!/usr/bin/env python3
 import base64
 import hashlib
 import hmac
-import requests
 import time
 
 import config as cfg
