@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import inspect
 import json
 import logging
+import os
 import re
 import requests
 
@@ -15,13 +15,12 @@ import config as cfg
 config = cfg.get_config()
 logger = logging.getLogger(__name__)
 
-
-workflow = config["vantage"]["workflow_list"]["_Info for AdStream Uploads"]
-endpoint_list = config["vantage"]["endpoint_list"]
 adstream_folders = config["Adstream"]
+endpoint_list = config["vantage"]["endpoint_list"]
 root_unc = config["paths"]["root_unc"]
 root_letter = config["paths"]["root_letter"]
-
+script_root = config['paths']['script_root']
+workflow = config["vantage"]["workflow_list"]["_Info for AdStream Uploads"]
 
 def check_workflows(workflow):
     """
@@ -68,6 +67,7 @@ def check_workflows(workflow):
             else:
                 continue
         else:
+            job_id = job["Identifier"]
             dup_job_msg = f"Job ID: {job_id} is a duplicate, skipping"
             logger.info(dup_job_msg)
             continue
@@ -92,6 +92,7 @@ def check_jobs(job):
         job_id = None
         return job_id
 
+    os.chdir(script_root)
     with open("job_id_list.txt", "r+") as f:
         contents = f.readlines()
         failed_job_text = f"Upload Failed for job id: {job_id}"
@@ -101,13 +102,13 @@ def check_jobs(job):
         upload_failed_match = re.search(failed_job_text, job_list_contents)
 
         if (job_id_match != None
-                and upload_failed_match == None):
+            and upload_failed_match == None):
             job_match_msg = f"Job ID {job_id} already exists in the job list.txt, setting job_id to None"
             logger.info(job_match_msg)
             job_id = None
         else:
             f.write(f"{job_id}\n")
-            job_match_msg = f"Job ID {job_id} - does not exist in the job list.txt, orprevious upload attempta failed, return id for processing."
+            job_match_msg = f"Job ID {job_id} - does not exist in the job list.txt, or previous upload attempta failed, return id for processing."
             logger.info(job_match_msg)
 
         f.close()
@@ -205,8 +206,7 @@ def get_endpoint():
             endpoint_status = endpoint_check(endpoint)
 
             if endpoint_status != True:
-                endpoint_status_msg = f"\n\n{endpoint.upper()} is not active or unreachable, \
-                        please check the Vantage SDK service on the host.\n"
+                endpoint_status_msg = f"\n {endpoint.upper()} is not active or unreachable, please check the Vantage SDK service on the host.\n"
                 logger.error(endpoint_status_msg)
                 continue
             else:
@@ -233,7 +233,7 @@ def endpoint_check(endpoint):
         endpoint_status = domain_check_rsp['Online']
 
     except requests.exceptions.RequestException as excp:
-        excp_msg2 = f"\n\n Exception raised on API check for endpoint:  {endpoint}.\n\n"
+        excp_msg2 = f"Exception raised on API check for endpoint: {endpoint}."
         endpoint_status = ("error")
         logger.error(excp_msg2)
 
