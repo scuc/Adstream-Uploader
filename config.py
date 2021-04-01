@@ -8,7 +8,7 @@ def get_config():
     """
     Setup configuration and credentials
     """
-    path = 'config.yaml'
+    path = '/Users/admin/Scripts/AdStream-Uploader/config.yaml'
 
     with open(path, 'rt') as f:
         config = yaml.safe_load(f.read())
