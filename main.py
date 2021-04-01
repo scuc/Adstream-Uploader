@@ -1,25 +1,22 @@
-
+#!/usr/local/opt/python/bin/python3.7
 import datetime
-import glob
 import json
 import logging
 import logging.config
 import os
 import yaml
 
-from logging.handlers import TimedRotatingFileHandler
-from pathlib import Path
 from time import localtime, strftime
 
 import api_adstream as api_a
 import api_vantage as api_v
-import get_authentication as getauth
 
 import config as cfg
 
 logger = logging.getLogger(__name__)
 
 config = cfg.get_config()
+script_root = config['paths']['script_root']
 # source_path = config['paths']['source_path']
 # cfg.ensure_dirs(source_path)
 
@@ -28,7 +25,7 @@ def set_logger():
     """
     Setup logging configuration
     """
-    path = 'logging.yaml'
+    path = os.path.join(script_root, 'logging.yaml')
 
     with open(path, 'rt') as f:
         config = yaml.safe_load(f.read())
@@ -83,7 +80,11 @@ def main():
         complete_msg(media_summary)
     
     else: 
-        complete_msg()
+        media_summary = {
+            "Uploaded Files": ["None"],
+            "Failed Uploads": ["None"],
+            }
+        complete_msg(media_summary)
 
 
     
@@ -92,6 +93,12 @@ def complete_msg(media_summary):
     date_end = str(strftime('%A, %d. %B %Y %I:%M%p', localtime()))
     uploaded_files = media_summary["Uploaded Files"]
     failed_uploads = media_summary["Failed Uploads"]
+
+    if uploaded_files == []:
+        uploaded_files = ["None"]
+    
+    if failed_uploads == []: 
+        failed_uploads = ["None"]
 
     complete_msg = f"\n\
     ================================================================================\n\
@@ -106,7 +113,7 @@ def complete_msg(media_summary):
 
     return
     
-
+    # =======
     # api_a.get_project(projectId)
     # api_a.get_projects()
     # api_a.get_folder(folderId)
