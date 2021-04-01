@@ -1,16 +1,12 @@
-import base64
+#!/usr/bin/env python3
 import datetime
-import hashlib
-import hmac
 import json
 import logging
 import os
-import pprint
 import requests
 import time
 
 from pathlib import Path
-from time import localtime, strftime
 
 import config as cfg
 import get_authentication as getauth
@@ -94,13 +90,13 @@ def new_media_creation(adstream_upload_list):
         media_params = upload_media(vantage_job_id, **upload_params)
 
         if media_params != None:
-            media_finish = media_complete(vantage_job_id, **media_params)
+            media_finish = media_complete(vantage_job_id, filepath, **media_params)
         else:
             media_upload_err_msg = f"Media Upload ERROR for {vantage_job_id}, moving to next upload."
             logger.error(media_upload_err_msg)
             continue
 
-        if media_finish != None:
+        if media_finish == True:
             media_summary["Uploaded Files"].append(filename)
             media_complete_msg = f"{filename} now available in the adstream web interface."
             logger.info(media_complete_msg)
@@ -160,7 +156,7 @@ def upload_media(vantage_job_id, **upload_params):
     folderId = upload_params["folderId"]
     headers = {"Authorization": auth}
 
-    media_upload_msg = f"bBgin media upload for: {filename}"
+    media_upload_msg = f"Begin media upload for: {filename}"
     logger.info(media_upload_msg)
 
     try:
@@ -187,7 +183,7 @@ def upload_media(vantage_job_id, **upload_params):
             return None
 
 
-def media_complete(vantage_job_id, **media_params):
+def media_complete(vantage_job_id, filepath, **media_params):
     """
     POST request to complete the addition of new media file to Adstream platform. 
     """
@@ -222,9 +218,27 @@ def media_complete(vantage_job_id, **media_params):
         response = r.json()
         encoding = r.encoding
 
-        end_media_complete_msg = f"post response for media complete request: \n {response}"
+        response_msg = f"\n\
+                        {{\n\
+                        Status Code: {status_code} \n\
+                        Response: {response}\n\
+                        Encoding = {encoding}\n\
+                        }}"
+        logger.info(response_msg)
+
+        end_media_complete_msg = f"Post response for media complete request: \n {response}"
         logger.info(end_media_complete_msg)
-        media_finish = True
+        
+        if str(status_code) == "201":
+            # os.remove(filepath)
+            # remove_msg = f"{filename} deleted from location: {filepath}"
+            # logger.info(remove_msg)
+            media_finish = True
+        else:
+            bad_statuscode_msg = f"Unexpected status code returned: {status_code}\n\
+                                   Source file was not removed from the filesystem."
+            logger.info(bad_statuscode_msg)
+            media_finish = False 
 
         return media_finish
 
