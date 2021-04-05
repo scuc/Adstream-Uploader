@@ -178,3 +178,6 @@ dmypy.json
 .pyre/
 
 # pytype static type analyzer
+_logs/test.json
+_adstream.uploader.script.plist
+config.yaml
