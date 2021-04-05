@@ -39,7 +39,7 @@ def new_media_creation(adstream_upload_list):
 
     for media in adstream_upload_list:
         # Short pause between uploads so Adstream does not think script is a DOS attack.
-        time.sleep(30)
+        time.sleep(10)
 
         if media == {}:
             continue
@@ -90,7 +90,8 @@ def new_media_creation(adstream_upload_list):
         media_params = upload_media(vantage_job_id, **upload_params)
 
         if media_params != None:
-            media_finish = media_complete(vantage_job_id, filepath, **media_params)
+            media_finish = media_complete(
+                vantage_job_id, filepath, **media_params)
         else:
             media_upload_err_msg = f"Media Upload ERROR for {vantage_job_id}, moving to next upload."
             logger.error(media_upload_err_msg)
@@ -123,20 +124,43 @@ def register_media(filename, vantage_job_id):
         url_register_media = f"https://a5.adstream.com/api/v2/folders/{folderId}/media"
 
         json = {"filename": filename}
-        headers = {"Authorization": auth}
+        headers = {
+            "Authorization": auth,
+            "Content-Type": "application/json",
+            "Accept-Encoding": None
+        }
         r = requests.post(url_register_media, headers=headers, json=json)
         response = r.json()
 
-        rsp_sucess_msg = f"Resgister media sucessful for: {filename}"
-        logger.info(rsp_sucess_msg)
+        headers = r.headers
+        r.connection.close()
+
+        headers_register_media_msg = f"MEDIA REGISTER HEADERS:\n {headers}"
+        logger.info(headers_register_media_msg)
+
+        register_resp_msg = f"MEDIA REGISTER RESPONSE: \n {response}"
+        logger.info(register_resp_msg)
+
+        status = response[0]['status']
+        rsp_status_msg = f"Response for media Registration: {status}"
+        logger.info(rsp_status_msg)
+
+        if response[0]['status'] == "succeeded":
+
+            rsp_sucess_msg = f"Resgister media sucessful for: {filename}"
+            logger.info(rsp_sucess_msg)
+
+        else:
+            rsp_fail_msg = f"Media registration error for {filename}, status = {status}"
+            logger.error(rsp_fail_msg)
 
         return response
 
     except Exception as e:
-            reg_err_msg = f"Exception on Register Media step for {filename} \n {e}"
-            logger.error(reg_err_msg)
-            cleanup_media_fail(vantage_job_id, filename)
-            return None
+        reg_err_msg = f"Exception on Register Media step for {filename} \n {e}"
+        logger.error(reg_err_msg)
+        cleanup_media_fail(vantage_job_id, filename)
+        return None
 
 
 def upload_media(vantage_job_id, **upload_params):
@@ -154,17 +178,29 @@ def upload_media(vantage_job_id, **upload_params):
     fileId = upload_params["fileId"]
     storageId = upload_params["storageId"]
     folderId = upload_params["folderId"]
-    headers = {"Authorization": auth}
+    reference = upload_params["reference"]
+    # headers = {
+    #             "Authorization": auth,
+    #             "Content-Type": "application/json",
+    #             "Content-Length": "580",
+    #             "Accept-Encoding": None
+    # }
 
     media_upload_msg = f"Begin media upload for: {filename}"
     logger.info(media_upload_msg)
 
     try:
         with open(media, 'rb') as f:
-            r = requests.put(url, files={filename: f})
-            response = r.text
+            data = f.read()
+            r = requests.put(url, data=data)
             status_code = r.status_code
             encoding = r.encoding
+            headers = r.headers
+
+        r.connection.close()
+
+        upload_headers_msg = f"MEDIA UPLOAD HEADERS:\n {headers}"
+        logger.info(upload_headers_msg)
 
         upload_params = {"filename": filename, "folderId": folderId,
                          "storageId": storageId, "fileId": fileId}
@@ -177,10 +213,10 @@ def upload_media(vantage_job_id, **upload_params):
         return upload_params
 
     except Exception as e:
-            upload_err_msg = f"Exception on the Media Upload step for {filename}: \n {e}"
-            logger.error(upload_err_msg)
-            cleanup_media_fail(vantage_job_id, filename)
-            return None
+        upload_err_msg = f"Exception on the Media Upload step for {filename}: \n {e}"
+        logger.error(upload_err_msg)
+        cleanup_media_fail(vantage_job_id, filename)
+        return None
 
 
 def media_complete(vantage_job_id, filepath, **media_params):
@@ -210,13 +246,25 @@ def media_complete(vantage_job_id, filepath, **media_params):
             "subtype": "element",
         }
 
-        headers = {"Authorization": auth}
+        headers = {
+            "Authorization": auth,
+            "Content-Type": "application/json",
+            "Accept-Encoding": None
+        }
+
         params = {'fileId': fileId, "folderId": folderId}
         r = requests.post(url_media_complete, headers=headers,
                           json=json, params=params)
         status_code = r.status_code
         response = r.json()
         encoding = r.encoding
+
+        headers = r.headers
+
+        headers_media_complete_msg = f"MEDIA COMPLETE HEADERS:\n {headers}"
+        logger.info(headers_media_complete_msg)
+
+        r.connection.close()
 
         response_msg = f"\n\
                         {{\n\
@@ -228,7 +276,7 @@ def media_complete(vantage_job_id, filepath, **media_params):
 
         end_media_complete_msg = f"Post response for media complete request: \n {response}"
         logger.info(end_media_complete_msg)
-        
+
         if str(status_code) == "201":
             # os.remove(filepath)
             # remove_msg = f"{filename} deleted from location: {filepath}"
@@ -238,7 +286,7 @@ def media_complete(vantage_job_id, filepath, **media_params):
             bad_statuscode_msg = f"Unexpected status code returned: {status_code}\n\
                                    Source file was not removed from the filesystem."
             logger.info(bad_statuscode_msg)
-            media_finish = False 
+            media_finish = False
 
         return media_finish
 
