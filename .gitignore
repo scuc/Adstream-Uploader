@@ -181,3 +181,5 @@ dmypy.json
 _logs/test.json
 _adstream.uploader.script.plist
 config.yaml
+.vscode/settings.json
+_DeployToAdStream
