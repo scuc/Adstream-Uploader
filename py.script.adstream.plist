@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>PATH</key>
+			<string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/sbin</string>
+		</dict>
+		<key>Label</key>
+		<string>py.script.adstream</string>
+		<key>ProgramArguments</key>
+		<array>
+			<string>/usr/local/opt/python/bin/python3.7</string>
+			<string>/Users/admin/Scripts/AdStream-Uploader/main.py</string>
+		</array>
+		<key>StartInterval</key>
+		<integer>60</integer>
+		<key>Debug</key>
+		<true/>
+		<key>StandardErrorPath</key>
+		<string>/tmp/adstream-script.err</string>
+		<key>StandardOutPath</key>
+		<string>/tmp/adstream-script.out</string>
+	</dict>
+</plist>
