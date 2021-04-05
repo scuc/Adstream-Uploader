@@ -22,6 +22,7 @@ root_letter = config["paths"]["root_letter"]
 script_root = config['paths']['script_root']
 workflow = config["vantage"]["workflow_list"]["_Info for AdStream Uploads"]
 
+
 def check_workflows(workflow):
     """
     Vantage REST api calls to check workflows for new media and pull variables from jobs.
@@ -47,6 +48,9 @@ def check_workflows(workflow):
     adstream_upload_list = []
 
     for job in jobs_list:
+
+        job_id = job["Identifier"]
+
         if job["Name"] == "_Info for AdStream Uploads":
             continue
 
@@ -102,7 +106,7 @@ def check_jobs(job):
         upload_failed_match = re.search(failed_job_text, job_list_contents)
 
         if (job_id_match != None
-            and upload_failed_match == None):
+                and upload_failed_match == None):
             job_match_msg = f"Job ID {job_id} already exists in the job list.txt, setting job_id to None"
             logger.info(job_match_msg)
             job_id = None
@@ -125,7 +129,7 @@ def get_job_variabes(job_id):
     output_endpoint = f"{root_uri}/Rest/jobs/{job_id}/outputs"
     r = requests.get(output_endpoint)
     response = r.json()
-    print(f"================== RESPONSE: {response} ============= ")
+    # print(f"================== RESPONSE: {response} ============= ")
     if response["Labels"] != []:
 
         vars = response["Labels"][0]["Params"]
