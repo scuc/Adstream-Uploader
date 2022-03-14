@@ -22,7 +22,6 @@ root_letter = config["paths"]["root_letter"]
 script_root = config['paths']['script_root']
 workflow = config["vantage"]["workflow_list"]["_Info for AdStream Uploads"]
 
-
 def check_workflows(workflow):
     """
     Vantage REST api calls to check workflows for new media and pull variables from jobs.
@@ -46,6 +45,10 @@ def check_workflows(workflow):
     logger.info(job_list_msg)
 
     adstream_upload_list = []
+    duplicate_count = 0
+
+    job_msg = f"Checking Vantage jobs"
+    logger.info(job_msg)
 
     for job in jobs_list:
 
@@ -57,10 +60,10 @@ def check_workflows(workflow):
         else:
             job_id = check_jobs(job)
             job_msg = f"Checking Vantage job: {job_id}"
-            logger.info(job_msg)
+            logger.debug(job_msg)
 
         if (job_id is not None
-                and job_id != "[]"):
+            and job_id != "[]"):
 
             kv_dict = get_job_variabes(job_id)
 
@@ -71,10 +74,16 @@ def check_workflows(workflow):
             else:
                 continue
         else:
+            duplicate_count += 1
             job_id = job["Identifier"]
             dup_job_msg = f"Job ID: {job_id} is a duplicate, skipping"
-            logger.info(dup_job_msg)
+            logger.debug(dup_job_msg)
             continue
+
+    job_check_complete_msg = f"Vantage job check complete."
+    logger.info(job_check_complete_msg)
+    duplicates_skipped_msg = f"Total duplicate jobs skipped = {duplicate_count}"
+    logger.info(duplicates_skipped_msg)
 
     return adstream_upload_list
 
@@ -90,8 +99,8 @@ def check_jobs(job):
     if job_state == 5:
         check_job_msg = f"checking job: {job_id}"
         job_state_msg = f"job state: {job_state}"
-        logger.info(check_job_msg)
-        logger.info(job_state_msg)
+        logger.debug(check_job_msg)
+        logger.debug(job_state_msg)
     else:
         job_id = None
         return job_id
@@ -106,13 +115,13 @@ def check_jobs(job):
         upload_failed_match = re.search(failed_job_text, job_list_contents)
 
         if (job_id_match != None
-                and upload_failed_match == None):
-            job_match_msg = f"Job ID {job_id} already exists in the job list.txt, setting job_id to None"
+            and upload_failed_match == None):
+            job_match_msg = f"Job Identifier already exists in the job list.txt, setting job_id to None"
             logger.info(job_match_msg)
             job_id = None
         else:
             f.write(f"{job_id}\n")
-            job_match_msg = f"Job ID {job_id} - does not exist in the job list.txt, or previous upload attempta failed, return id for processing."
+            job_match_msg = f"Job Identifier - does not exist in the job list.txt, or previous upload attempta failed, return id for processing."
             logger.info(job_match_msg)
 
         f.close()
