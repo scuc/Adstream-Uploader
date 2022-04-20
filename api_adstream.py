@@ -3,35 +3,36 @@ import datetime
 import json
 import logging
 import os
-import requests
 import shutil
 import time
-
 from pathlib import Path
+
+import requests
 
 import config as cfg
 import get_authentication as getauth
 
-
 config = cfg.get_config()
 # json_path = config['paths']['json_path']
 # media_path = config['paths']['media_path']
-root_folderId = config['Adstream']['NatGeoPromoExchange']
-uploaded_dir_path = config['paths']['upload_dir_posix']
+root_folderId = config["Adstream"]["NatGeoPromoExchange"]
+uploaded_dir_path = config["paths"]["upload_dir_posix"]
 
 logger = logging.getLogger(__name__)
 
 
 def new_media_creation(adstream_upload_list):
     """
-    Three step process to add media into the Adstream platorm. 
+    Three step process to add media into the Adstream platorm.
     1 - POST request  to register a placeholder for the new media.
     2 - PUT request  - Use the response parameters from the register to upload the media
-    3 - POST request - complete the media creation with a put request. 
+    3 - POST request - complete the media creation with a put request.
 
     """
 
-    adstream_start_msg = f"\n \n ============== Starting media upload to Adstream =================\n"
+    adstream_start_msg = (
+        f"\n \n ============== Starting media upload to Adstream =================\n"
+    )
     logger.info(adstream_start_msg)
 
     adstream_list_msg = f"\n  ============ AdStream NEW MEDIA LIST ===========:\n {adstream_upload_list} \n"
@@ -47,8 +48,7 @@ def new_media_creation(adstream_upload_list):
             continue
         else:
             vantage_job_id = media["Job Id"]
-            registered_media = register_media(
-                media["File Name"], vantage_job_id)
+            registered_media = register_media(media["File Name"], vantage_job_id)
 
         if registered_media != None:
             fileId = registered_media[0]["id"]
@@ -85,7 +85,9 @@ def new_media_creation(adstream_upload_list):
                         }}"
             logger.info(upload_params_msg)
         else:
-            media_register_err_msg = f"Media Registration ERROR for {vantage_job_id}, moving to next."
+            media_register_err_msg = (
+                f"Media Registration ERROR for {vantage_job_id}, moving to next."
+            )
             logger.error(media_register_err_msg)
             continue
 
@@ -94,17 +96,23 @@ def new_media_creation(adstream_upload_list):
         if media_params != None:
             media_finish = media_complete(vantage_job_id, filepath, **media_params)
         else:
-            media_upload_err_msg = f"Media Upload ERROR for {vantage_job_id}, moving to next upload."
+            media_upload_err_msg = (
+                f"Media Upload ERROR for {vantage_job_id}, moving to next upload."
+            )
             logger.error(media_upload_err_msg)
             continue
 
         if media_finish == True:
             media_summary["Uploaded Files"].append(filename)
-            media_complete_msg = f"{filename} now available in the adstream web interface."
+            media_complete_msg = (
+                f"{filename} now available in the adstream web interface."
+            )
             logger.info(media_complete_msg)
         else:
             media_summary["Failed Uploads"].append(filename)
-            media_complete_err_msg = f"Media completetion ERROR for {vantage_job_id}, moving to next."
+            media_complete_err_msg = (
+                f"Media completetion ERROR for {vantage_job_id}, moving to next."
+            )
             logger.error(media_complete_err_msg)
             continue
 
@@ -113,7 +121,7 @@ def new_media_creation(adstream_upload_list):
 
 def register_media(filename, vantage_job_id):
     """
-    POST request to register a placeholder for new media. 
+    POST request to register a placeholder for new media.
     """
 
     try:
@@ -126,13 +134,13 @@ def register_media(filename, vantage_job_id):
 
         json = {"filename": filename}
         headers = {
-                    "Authorization": auth,
-                    "Content-Type": "application/json", 
-                    "Accept-Encoding": None
-                    }
+            "Authorization": auth,
+            "Content-Type": "application/json",
+            "Accept-Encoding": None,
+        }
         r = requests.post(url_register_media, headers=headers, json=json)
         response = r.json()
-        
+
         headers = r.headers
         r.connection.close()
 
@@ -142,11 +150,11 @@ def register_media(filename, vantage_job_id):
         register_resp_msg = f"MEDIA REGISTER RESPONSE: \n {response}"
         logger.info(register_resp_msg)
 
-        status = response[0]['status']
+        status = response[0]["status"]
         rsp_status_msg = f"Response for media Registration: {status}"
         logger.info(rsp_status_msg)
 
-        if response[0]['status'] == "succeeded":
+        if response[0]["status"] == "succeeded":
 
             rsp_sucess_msg = f"Resgister media sucessful for: {filename}"
             logger.info(rsp_sucess_msg)
@@ -158,15 +166,15 @@ def register_media(filename, vantage_job_id):
         return response
 
     except Exception as e:
-            reg_err_msg = f"Exception on Register Media step for {filename} \n {e}"
-            logger.error(reg_err_msg)
-            cleanup_media_fail(vantage_job_id, filename)
-            return None
+        reg_err_msg = f"Exception on Register Media step for {filename} \n {e}"
+        logger.error(reg_err_msg)
+        cleanup_media_fail(vantage_job_id, filename)
+        return None
 
 
 def upload_media(vantage_job_id, **upload_params):
     """
-    PUT request to upload the media file to the AdStream platform. 
+    PUT request to upload the media file to the AdStream platform.
     """
 
     auth = getauth.get_auth()
@@ -191,7 +199,7 @@ def upload_media(vantage_job_id, **upload_params):
     logger.info(media_upload_msg)
 
     try:
-        with open(media, 'rb') as f:
+        with open(media, "rb") as f:
             data = f.read()
             r = requests.put(url, data=data)
             status_code = r.status_code
@@ -203,8 +211,12 @@ def upload_media(vantage_job_id, **upload_params):
         upload_headers_msg = f"MEDIA UPLOAD HEADERS:\n {headers}"
         logger.info(upload_headers_msg)
 
-        upload_params = {"filename": filename, "folderId": folderId,
-                         "storageId": storageId, "fileId": fileId}
+        upload_params = {
+            "filename": filename,
+            "folderId": folderId,
+            "storageId": storageId,
+            "fileId": fileId,
+        }
 
         upload_complete_msg = f"Uplaod to adstream complete for: {filename}"
         upload_params_msg = f"Media params for {filename}: \n {upload_params}"
@@ -214,15 +226,15 @@ def upload_media(vantage_job_id, **upload_params):
         return upload_params
 
     except Exception as e:
-            upload_err_msg = f"Exception on the Media Upload step for {filename}: \n {e}"
-            logger.error(upload_err_msg)
-            cleanup_media_fail(vantage_job_id, filename)
-            return None
+        upload_err_msg = f"Exception on the Media Upload step for {filename}: \n {e}"
+        logger.error(upload_err_msg)
+        cleanup_media_fail(vantage_job_id, filename)
+        return None
 
 
 def media_complete(vantage_job_id, filepath, **media_params):
     """
-    POST request to complete the addition of new media file to Adstream platform. 
+    POST request to complete the addition of new media file to Adstream platform.
     """
 
     auth = getauth.get_auth()
@@ -232,30 +244,29 @@ def media_complete(vantage_job_id, filepath, **media_params):
     filename = media_params["filename"]
     storageId = media_params["storageId"]
 
-    start_media_compelete_msg = f"Starting the ""media compeletion"" step for {fileanme}"
+    start_media_compelete_msg = (
+        f"Starting the " "media compeletion" " step for {fileanme}"
+    )
     logger.info(start_media_compelete_msg)
 
     try:
-        url_media_complete = f"https://a5.adstream.com/api/v2/folders/{folderId}/media/{fileId}"
+        url_media_complete = (
+            f"https://a5.adstream.com/api/v2/folders/{folderId}/media/{fileId}"
+        )
 
         json = {
-            "meta": {
-                "common": {
-                    "name": f"{filename}"
-                }
-            },
+            "meta": {"common": {"name": f"{filename}"}},
             "subtype": "element",
         }
 
         headers = {
             "Authorization": auth,
             "Content-Type": "application/json",
-            "Accept-Encoding": None
+            "Accept-Encoding": None,
         }
 
-        params = {'fileId': fileId, "folderId": folderId}
-        r = requests.post(url_media_complete, headers=headers,
-                          json=json, params=params)
+        params = {"fileId": fileId, "folderId": folderId}
+        r = requests.post(url_media_complete, headers=headers, json=json, params=params)
         status_code = r.status_code
         response = r.json()
         encoding = r.encoding
@@ -275,9 +286,11 @@ def media_complete(vantage_job_id, filepath, **media_params):
                         }}"
         logger.info(response_msg)
 
-        end_media_complete_msg = f"Post response for media complete request: \n {response}"
+        end_media_complete_msg = (
+            f"Post response for media complete request: \n {response}"
+        )
         logger.info(end_media_complete_msg)
-        
+
         if str(status_code) == "201":
             # os.remove(filepath)
             # remove_msg = f"{filename} deleted from location: {filepath}"
@@ -288,7 +301,7 @@ def media_complete(vantage_job_id, filepath, **media_params):
             bad_statuscode_msg = f"Unexpected status code returned: {status_code}\n\
                                    Source file was not removed from the filesystem."
             logger.info(bad_statuscode_msg)
-            media_finish = False 
+            media_finish = False
 
         return media_finish
 
@@ -301,7 +314,7 @@ def media_complete(vantage_job_id, filepath, **media_params):
 
 def cleanup_media_fail(vantage_job_id, filename):
     """
-    CleanUp of the JobID List if the Adstream media creation fails. 
+    CleanUp of the JobID List if the Adstream media creation fails.
     """
     media_cleanup_msg = f"Starting Job ID clean up for - {vantage_job_id}"
     logger.info(media_cleanup_msg)
@@ -314,9 +327,11 @@ def cleanup_media_fail(vantage_job_id, filename):
                 f.write(line)
             else:
                 timenow = datetime.datetime.today()
-                timestamp = timenow.strftime("%Y-%m-%d, %H:%M:%S"),
+                timestamp = (timenow.strftime("%Y-%m-%d, %H:%M:%S"),)
                 new_line = line.replace(
-                    vantage_job_id, f"[ {timestamp} - Upload Failed for job id: {vantage_job_id} ]")
+                    vantage_job_id,
+                    f"[ {timestamp} - Upload Failed for job id: {vantage_job_id} ]",
+                )
                 f.write(new_line)
                 cleanup_msg = f"Adstream Media Creation Failure - Job ID: {vantage_job_id}, Filename: {filename}"
                 logger.info(cleanup_msg)
@@ -370,8 +385,7 @@ def get_folders():
                 time.sleep(5)
                 page_num += 1
             else:
-                json.dump(response, folders_file,
-                          indent=4, sort_keys=True)
+                json.dump(response, folders_file, indent=4, sort_keys=True)
                 print("OPTION 2:  " + str(page_num))
                 time.sleep(5)
                 page_num += 1
@@ -411,7 +425,7 @@ def get_projects():
     auth = getauth.get_auth()
     os.chdir(json_path)
 
-    url = 'https://a5.adstream.com/api/v2/projects'
+    url = "https://a5.adstream.com/api/v2/projects"
     auth = auth
     headers = {"Authorization": auth}
     epoch = str(round(time.time()))
@@ -435,8 +449,7 @@ def get_projects():
                 print("OPTION 1:  " + str(page_num))
                 page_num += 1
             else:
-                json.dump(response, projects_file,
-                          indent=4, sort_keys=True)
+                json.dump(response, projects_file, indent=4, sort_keys=True)
                 print("OPTION 2:  " + str(page_num))
                 page_num += 1
 
@@ -447,12 +460,12 @@ def get_projects():
 
 
 def compare_projects(json_file):
-    '''
+    """
     Get an updated list of projects and compare the new list to
-    the previously pulled list of the projects. Check for any 
-    differences between the two lists. Return the names of 
-    any new projects. 
-    '''
+    the previously pulled list of the projects. Check for any
+    differences between the two lists. Return the names of
+    any new projects.
+    """
     print("COMPARE PROJECTS")
     auth = getauth.get_auth()
     new_projects = get_projects(auth)
@@ -466,7 +479,7 @@ def compare_projects(json_file):
     print(f"DATA NEW: {len(data_new)}")
 
     for proj in data_old:
-        print(proj['meta']['common']['name'])
+        print(proj["meta"]["common"]["name"])
 
     if not len(data_new) == len(data_old):
         print("NOT EQUAL")
@@ -486,42 +499,12 @@ def create_project():
 
     url = "https://a5.adstream.com/api/v2/projects"
     project_name = "STEVE-TEST-3"
-    json = {"meta": {
-        "common": {
-            "name": f"{project_name}",
-            "published": False,
-            "projectMediaType": ["Broadcast"]
-        }
-    }
-    }
-
-    headers = {"Authorization": auth}
-    try:
-        r = requests.post(url, headers=headers, json=json)
-        response = r.json()
-        print(response)
-
-    except requests.exceptions.RequestException as e:
-        raise SystemExit(e)
-
-    return
-
-
-def create_project_folder():
-    """
-    Create a new folder in a specific project 
-    """
-
-    auth = getauth.get_auth()
-
-    url = "https://a5.adstream.com/api/v2/folders"
-    project_id = "601c52c5c9e77c000171e893"
-    folder_name = "Steves-TEST-Upload-Folder-No2"
     json = {
-        "parent": f"{project_id}",
         "meta": {
             "common": {
-                "name": f"{folder_name}"
+                "name": f"{project_name}",
+                "published": False,
+                "projectMediaType": ["Broadcast"],
             }
         }
     }
@@ -538,5 +521,29 @@ def create_project_folder():
     return
 
 
-if __name__ == '__main__':
+def create_project_folder():
+    """
+    Create a new folder in a specific project
+    """
+
+    auth = getauth.get_auth()
+
+    url = "https://a5.adstream.com/api/v2/folders"
+    project_id = "601c52c5c9e77c000171e893"
+    folder_name = "Steves-TEST-Upload-Folder-No2"
+    json = {"parent": f"{project_id}", "meta": {"common": {"name": f"{folder_name}"}}}
+
+    headers = {"Authorization": auth}
+    try:
+        r = requests.post(url, headers=headers, json=json)
+        response = r.json()
+        print(response)
+
+    except requests.exceptions.RequestException as e:
+        raise SystemExit(e)
+
+    return
+
+
+if __name__ == "__main__":
     create_project()

@@ -4,19 +4,18 @@ import json
 import logging
 import logging.config
 import os
-import yaml
-
 from time import localtime, strftime
+
+import yaml
 
 import api_adstream as api_a
 import api_vantage as api_v
-
 import config as cfg
 
 logger = logging.getLogger(__name__)
 
 config = cfg.get_config()
-script_root = config['paths']['script_root']
+script_root = config["paths"]["script_root"]
 # source_path = config['paths']['source_path']
 # cfg.ensure_dirs(source_path)
 
@@ -25,20 +24,20 @@ def set_logger():
     """
     Setup logging configuration
     """
-    path = os.path.join(script_root, 'logging.yaml')
+    path = os.path.join(script_root, "logging.yaml")
 
-    with open(path, 'rt') as f:
+    with open(path, "rt") as f:
         config = yaml.safe_load(f.read())
 
-    # get the file name from the handlers, append the date to the filename. 
-        for i in (config["handlers"].keys()):
-            if 'filename' in config['handlers'][i]:
+        # get the file name from the handlers, append the date to the filename.
+        for i in config["handlers"].keys():
+            if "filename" in config["handlers"][i]:
                 log_filename = config["handlers"][i]["filename"]
                 base, extension = os.path.splitext(log_filename)
                 today = datetime.datetime.today()
-                log_filename = "{}_{}{}".format(base,
-                                                today.strftime("%Y%m%d"),
-                                                extension)
+                log_filename = "{}_{}{}".format(
+                    base, today.strftime("%Y%m%d"), extension
+                )
                 config["handlers"][i]["filename"] = log_filename
             else:
                 print("+++++++++++++++ ERROR STARTING LOG FILE ++++++++++++++++")
@@ -48,19 +47,18 @@ def set_logger():
     return logger
 
 
-
-def main(): 
+def main():
     """
-    This script talk to the Vantage REST api to look for new jobs in a specific workflow. 
-    If new jobs are found, they are added to a list of dicts with the job variables - jobid, filename, filepath. 
-    The script then loops over the job list - for each job it talks to the Adstream API. 
-    Three steps to the Adstream API - 
-    1) POST - Register new media; 
-    2) PUT - Upload the new media; 
+    This script talk to the Vantage REST api to look for new jobs in a specific workflow.
+    If new jobs are found, they are added to a list of dicts with the job variables - jobid, filename, filepath.
+    The script then loops over the job list - for each job it talks to the Adstream API.
+    Three steps to the Adstream API -
+    1) POST - Register new media;
+    2) PUT - Upload the new media;
     3) POST - Complete the new media creation
     """
 
-    date_start = str(strftime('%A, %d. %B %Y %I:%M%p', localtime()))
+    date_start = str(strftime("%A, %d. %B %Y %I:%M%p", localtime()))
 
     start_msg = f"\n\
     ==================================================================================\n\
@@ -74,30 +72,29 @@ def main():
 
     adstream_upload_list = api_v.check_workflows(workflow)
 
-    if len(adstream_upload_list) != 0: 
+    if len(adstream_upload_list) != 0:
 
         media_summary = api_a.new_media_creation(adstream_upload_list)
         complete_msg(media_summary)
-    
-    else: 
+
+    else:
         media_summary = {
             "Uploaded Files": ["None"],
             "Failed Uploads": ["None"],
-            }
+        }
         complete_msg(media_summary)
 
 
-    
 def complete_msg(media_summary):
 
-    date_end = str(strftime('%A, %d. %B %Y %I:%M%p', localtime()))
+    date_end = str(strftime("%A, %d. %B %Y %I:%M%p", localtime()))
     uploaded_files = media_summary["Uploaded Files"]
     failed_uploads = media_summary["Failed Uploads"]
 
     if uploaded_files == []:
         uploaded_files = ["None"]
-    
-    if failed_uploads == []: 
+
+    if failed_uploads == []:
         failed_uploads = ["None"]
 
     complete_msg = f"\n\
@@ -112,7 +109,7 @@ def complete_msg(media_summary):
     logger.info(complete_msg)
 
     return
-    
+
     # =======
     # api_a.get_project(projectId)
     # api_a.get_projects()
@@ -124,6 +121,6 @@ def complete_msg(media_summary):
     # api_a.create_project_folder(auth)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     set_logger()
     main()

@@ -4,13 +4,12 @@ import json
 import logging
 import os
 import re
-import requests
-
-from pathlib import PureWindowsPath, PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 from sys import platform
 
-import config as cfg
+import requests
 
+import config as cfg
 
 config = cfg.get_config()
 logger = logging.getLogger(__name__)
@@ -19,8 +18,9 @@ adstream_folders = config["Adstream"]
 endpoint_list = config["vantage"]["endpoint_list"]
 root_unc = config["paths"]["root_unc"]
 root_letter = config["paths"]["root_letter"]
-script_root = config['paths']['script_root']
+script_root = config["paths"]["script_root"]
 workflow = config["vantage"]["workflow_list"]["_Info for AdStream Uploads"]
+
 
 def check_workflows(workflow):
     """
@@ -62,8 +62,7 @@ def check_workflows(workflow):
             job_msg = f"Checking Vantage job: {job_id}"
             logger.debug(job_msg)
 
-        if (job_id is not None
-            and job_id != "[]"):
+        if job_id is not None and job_id != "[]":
 
             kv_dict = get_job_variabes(job_id)
 
@@ -114,8 +113,7 @@ def check_jobs(job):
         job_id_match = re.search(job_id, job_list_contents)
         upload_failed_match = re.search(failed_job_text, job_list_contents)
 
-        if (job_id_match != None
-            and upload_failed_match == None):
+        if job_id_match != None and upload_failed_match == None:
             job_match_msg = f"Job Identifier already exists in the job list.txt, setting job_id to None"
             logger.info(job_match_msg)
             job_id = None
@@ -130,7 +128,7 @@ def check_jobs(job):
 
 def get_job_variabes(job_id):
     """
-    Get the job variables from the vantage workflow. 
+    Get the job variables from the vantage workflow.
     """
     api_endpoint = get_endpoint()
     root_uri = f"http://{api_endpoint}:8676/"
@@ -156,7 +154,9 @@ def get_job_variabes(job_id):
 
     else:
         kv_dict = {}
-        job_dict_msg = f"Variables for Job ID {job_id} are empty, returning empty dict {{}}"
+        job_dict_msg = (
+            f"Variables for Job ID {job_id} are empty, returning empty dict {{}}"
+        )
         logger.info(job_dict_msg)
 
     return kv_dict
@@ -164,7 +164,7 @@ def get_job_variabes(job_id):
 
 def create_media_dict(media_upload_list):
     """
-    use the media upload list to create list of dicts 
+    use the media upload list to create list of dicts
     with K:V pair info needed for upload to adstream
     """
 
@@ -176,7 +176,7 @@ def create_media_dict(media_upload_list):
         letter_path = d["File Path"]
         unc_path = letter_path.replace(root_letter, root_unc)
         path = PureWindowsPath(unc_path)
-        folder = str(path.parent).rsplit('\\', 1)[-1]
+        folder = str(path.parent).rsplit("\\", 1)[-1]
 
         if folder != "_DeployToAdStream":
 
@@ -211,6 +211,7 @@ def create_media_dict(media_upload_list):
 
 # ===================== API ENPOINTS CHECKS ======================= #
 
+
 def get_endpoint():
     """
     Select an api endpoint from the list of available Vantage servers.
@@ -238,17 +239,16 @@ def endpoint_check(endpoint):
     check the online status of an api endpoint
     """
 
-    root_uri = 'http://' + endpoint + ':8676'
+    root_uri = "http://" + endpoint + ":8676"
 
     try:
-        domain_check = requests.get(
-            root_uri + '/REST/Domain/Online')
+        domain_check = requests.get(root_uri + "/REST/Domain/Online")
         domain_check_rsp = domain_check.json()
-        endpoint_status = domain_check_rsp['Online']
+        endpoint_status = domain_check_rsp["Online"]
 
     except requests.exceptions.RequestException as excp:
         excp_msg2 = f"Exception raised on API check for endpoint: {endpoint}."
-        endpoint_status = ("error")
+        endpoint_status = "error"
         logger.error(excp_msg2)
 
     endpoint_status_msg = f"Endpoint - {endpoint} has the status of {endpoint_status}"
@@ -257,5 +257,5 @@ def endpoint_check(endpoint):
     return endpoint_status
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     check_workflows()
