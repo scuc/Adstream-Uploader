@@ -1,6 +1,4 @@
-#!/usr/local/opt/python/bin/python3.7
 import datetime
-import json
 import logging
 import logging.config
 import os
@@ -14,113 +12,100 @@ import config as cfg
 
 logger = logging.getLogger(__name__)
 
-config = cfg.get_config()
-script_root = config["paths"]["script_root"]
-# source_path = config['paths']['source_path']
-# cfg.ensure_dirs(source_path)
+
+# def load_config():
+#     """
+#     Load configuration settings.
+#     """
+#     return cfg.get_config()
 
 
-def set_logger():
+def set_logger(script_root):
     """
-    Setup logging configuration
+    Set up logging configuration.
     """
-    path = os.path.join(script_root, "logging.yaml")
+    log_config_path = os.path.join(script_root, "logging.yaml")
 
-    with open(path, "rt") as f:
-        config = yaml.safe_load(f.read())
+    with open(log_config_path, "rt") as f:
+        log_config = yaml.safe_load(f.read())
 
-        # get the file name from the handlers, append the date to the filename.
-        for i in config["handlers"].keys():
-            if "filename" in config["handlers"][i]:
-                log_filename = config["handlers"][i]["filename"]
-                base, extension = os.path.splitext(log_filename)
-                today = datetime.datetime.today()
-                log_filename = "{}_{}{}".format(
-                    base, today.strftime("%Y%m%d"), extension
-                )
-                config["handlers"][i]["filename"] = log_filename
-            else:
-                print("+++++++++++++++ ERROR STARTING LOG FILE ++++++++++++++++")
+        # Update the log filename with the current date.
+        today = datetime.datetime.today().strftime("%Y%m%d")
+        for handler in log_config["handlers"].values():
+            if "filename" in handler:
+                base, extension = os.path.splitext(handler["filename"])
+                handler["filename"] = f"{base}_{today}{extension}"
 
-        logger = logging.config.dictConfig(config)
+        logging.config.dictConfig(log_config)
 
-    return logger
+
+def log_start():
+    """
+    Log the start of the AdStream upload process.
+    """
+    date_start = strftime("%A, %d. %B %Y %I:%M%p", localtime())
+    start_msg = (
+        "\n"
+        "==================================================================================\n"
+        f"            AdStream Upload - Start - {date_start} \n"
+        "==================================================================================\n"
+    )
+    logger.info(start_msg)
+
+
+def log_complete(media_summary):
+    """
+    Log the completion of the AdStream upload process.
+    """
+    date_end = strftime("%A, %d. %B %Y %I:%M%p", localtime())
+    uploaded_files = media_summary.get("Uploaded Files", ["None"])
+    failed_uploads = media_summary.get("Failed Uploads", ["None"])
+
+    complete_msg = (
+        "\n"
+        "================================================================================\n"
+        f"            AdStream Upload - Complete - {date_end} \n"
+        "================================================================================\n"
+        f"        Media Uploaded to Adstream: {uploaded_files}\n"
+        f"        Media Failed to Upload: {failed_uploads}\n"
+        "================================================================================\n"
+    )
+    logger.info(complete_msg)
 
 
 def main():
     """
-    This script talk to the Vantage REST api to look for new jobs in a specific workflow.
-    If new jobs are found, they are added to a list of dicts with the job variables - jobid, filename, filepath.
-    The script then loops over the job list - for each job it talks to the Adstream API.
-    Three steps to the Adstream API -
-    1) POST - Register new media;
-    2) PUT - Upload the new media;
-    3) POST - Complete the new media creation
+    Main function to handle AdStream uploads.
+
+    This script interacts with the Vantage REST API to identify new jobs within a specific workflow. When new jobs are detected, they are collected into a list of dictionaries, each containing key job details such as jobid, filename, and filepath.
+
+    The script then processes each job in the list by communicating with the Adstream API.
+    This involves a three-step process:
+
+    POST - Register new media: Initiates the media registration process with Adstream.
+    PUT - Upload the new media: Uploads the media file to Adstream.
+    POST - Complete the new media creation: Finalizes the media creation process in Adstream.
+
     """
+    config = cfg.get_config()
+    script_root = config["paths"]["script_root"]
+    set_logger(script_root)
 
-    date_start = str(strftime("%A, %d. %B %Y %I:%M%p", localtime()))
+    log_start()
 
-    start_msg = f"\n\
-    ==================================================================================\n\
-                AdStream Upload - Start - {date_start} \n\
-    ==================================================================================\n\
-   "
-
-    logger.info(start_msg)
-
-    workflow = config["vantage"]["workflow_list"]["_Info for AdStream Uploads"]
-
+    workflow = config["vantage"]["workflows"]["_Info for AdStream Uploads"]
     adstream_upload_list = api_v.check_workflows(workflow)
 
-    if len(adstream_upload_list) != 0:
-
+    if adstream_upload_list:
         media_summary = api_a.new_media_creation(adstream_upload_list)
-        complete_msg(media_summary)
-
     else:
         media_summary = {
             "Uploaded Files": ["None"],
             "Failed Uploads": ["None"],
         }
-        complete_msg(media_summary)
 
-
-def complete_msg(media_summary):
-
-    date_end = str(strftime("%A, %d. %B %Y %I:%M%p", localtime()))
-    uploaded_files = media_summary["Uploaded Files"]
-    failed_uploads = media_summary["Failed Uploads"]
-
-    if uploaded_files == []:
-        uploaded_files = ["None"]
-
-    if failed_uploads == []:
-        failed_uploads = ["None"]
-
-    complete_msg = f"\n\
-    ================================================================================\n\
-                Adstream Upload - Complete - {date_end} \n\
-    ================================================================================\n\
-            Media Uploaded to Adstream: {uploaded_files}\n\
-            Media Failed to Upload: {failed_uploads}\n\
-    ================================================================================\n\
-    "
-
-    logger.info(complete_msg)
-
-    return
-
-    # =======
-    # api_a.get_project(projectId)
-    # api_a.get_projects()
-    # api_a.get_folder(folderId)
-    # api_a.register_media()
-    # api_a.search_files()
-    # api_a.get_folders()
-    # api_a.upload_media(auth)
-    # api_a.create_project_folder(auth)
+    log_complete(media_summary)
 
 
 if __name__ == "__main__":
-    set_logger()
     main()
