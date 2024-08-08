@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 def get_date():
-
     """
     get todays date and time, use the month value to build a list of log files.
     """
