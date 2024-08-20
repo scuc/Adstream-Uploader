@@ -33,7 +33,7 @@ def check_workflows(workflow):
     response = requests.get(workflow_endpoint).json()
     jobs_list = response.get("Jobs", [])
 
-    logger.info(f"New jobs in the workflow: \n{response}")
+    logger.info(f"New jobs in the workflow: \n{json.dumps(response, indent=4)}")
     logger.info("Checking Vantage jobs")
 
     adstream_upload_list = []
@@ -141,7 +141,7 @@ def create_media_dict(kv_dict):
 
     folder = str(path.parent).rsplit("/", 1)[-1]
 
-    logger.info(f"\nAdstream folder: {folder}\n")
+    logger.info(f"Adstream folder: {folder}\n")
 
     if folder != "_DeployToAdStream":
         folderId = adstream_folders[folder]
@@ -159,7 +159,17 @@ def create_media_dict(kv_dict):
             }
         )
 
-    logger.info(f"Media dict for adstream: \n{media_dict}")
+    if isinstance(media_dict["File Path"], PurePosixPath):
+        logger.info(
+            f"'File Path' in media_dict is a POSIX: {type(media_dict['File Path'])}"
+        )
+        media_dict["File Path"] = str(media_dict["File Path"])
+    else:
+        logger.info(
+            f"'File Path' in media_dict is not a POSIX: {type(media_dict['File Path'])}"
+        )
+
+    logger.info(f"Media dict for adstream: \n{json.dumps(media_dict, indent=4)}")
     return media_dict
 
 

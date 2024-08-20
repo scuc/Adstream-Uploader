@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import requests
 
@@ -14,7 +14,9 @@ import get_authentication as getauth
 # Configuration setup
 config = cfg.get_config()
 root_folder_id = config["Adstream"]["NatGeoPromoExchange"]
-uploaded_dir_path = config["paths"]["upload_dir_posix"]
+root_fsis3 = Path(config["paths"]["root_fsis3_posix"])
+uploaded_rel_path = Path(config["paths"]["upload_dir_posix"])
+uploaded_dir_path = Path(root_fsis3, uploaded_rel_path)
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +34,9 @@ def new_media_creation(adstream_upload_list):
     Returns:
         dict: Summary of the upload process.
     """
-    logger.info("\n\n============= Starting media upload to Adstream ==============")
+    logger.info("Starting media upload to Adstream")
     logger.info(
-        f"\n=========== AdStream NEW MEDIA LIST ===========:\n{adstream_upload_list}\n"
+        f"\n\n=========== AdStream NEW MEDIA LIST ===========:\n{json.dumps(adstream_upload_list, indent=4)}\n"
     )
 
     media_summary = {"Uploaded Files": [], "Failed Uploads": []}
@@ -54,7 +56,7 @@ def new_media_creation(adstream_upload_list):
 
             if media_params:
                 media_finish = media_complete(
-                    vantage_job_id, media["File Path"], **media_params
+                    vantage_job_id, upload_params["media_path"], **media_params
                 )
                 if media_finish:
                     media_summary["Uploaded Files"].append(media["File Name"])
@@ -89,7 +91,7 @@ def register_media(filename, vantage_job_id):
 
     try:
         response = requests.post(url, headers=headers, json=json_data).json()
-        logger.info(f"MEDIA REGISTER RESPONSE: \n{response}")
+        logger.info(f"MEDIA REGISTER RESPONSE: \n{json.dumps(response, indent=4)}")
 
         if response[0]["status"] == "succeeded":
             logger.info(f"Register media successful for: {filename}")
@@ -145,12 +147,31 @@ def upload_media(vantage_job_id, **upload_params):
     file_path = upload_params["media_path"]
     filename = upload_params["filename"]
 
+    if isinstance(upload_params["media_path"], PurePosixPath):
+        logger.info(
+            f"media_path in upload_params is a POSIX: {type(upload_params['media_path'])}"
+        )
+        upload_params["media_path"] = str(upload_params["media_path"])
+    else:
+        logger.info(
+            f"media_path in upload_params is not a POSIX: {type(upload_params['media_path'])}"
+        )
+
+    logger.info(f"Upload Params: {json.dumps(upload_params, indent=4)}")
+    logger.info(f"Begin media upload for: {upload_params['filename']}")
+
     try:
         with open(file_path, "rb") as file:
-            response = requests.put(url, data=file.read())
+            data = file.read()
+            response = requests.put(url, data=data)
             response.raise_for_status()
-            logger.info(f"Upload to Adstream complete for: {filename}")
-            return upload_params
+            logger.info(f"Upload Response - status: {response.status_code}")
+            if response.status_code not in [200, 201, 202]:
+                logger.error(f"Media Upload for: {filename} returned an empty response")
+                raise Exception
+            else:
+                logger.info(f"Upload to Adstream complete for: {filename}")
+                return upload_params
 
     except Exception as e:
         logger.error(f"Exception during media upload for {filename}: {e}")
@@ -179,13 +200,14 @@ def media_complete(vantage_job_id, filepath, **media_params):
 
     try:
         response = requests.post(url, headers=headers, json=json_data).json()
-        if response.get("statusCode") == 201:
-            shutil.move(filepath, uploaded_dir_path)
+        logger.info(f"media_compelte() Response: {json.dumps(response, indent=4)}")
+        if isinstance(response, dict):
             logger.info(f"Media completion successful for {media_params['filename']}")
+            shutil.move(filepath, uploaded_dir_path)
             return True
         else:
             logger.error(
-                f"Unexpected status code {response.get('statusCode')} for {media_params['filename']}"
+                f"Unexpected response for {media_params['filename']}: \n: {response.text}"
             )
             return False
 
