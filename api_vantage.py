@@ -33,7 +33,7 @@ def check_workflows(workflow):
     response = requests.get(workflow_endpoint).json()
     jobs_list = response.get("Jobs", [])
 
-    logger.info(f"New jobs in the workflow: \n{json.dumps(response, indent=4)}")
+    logger.info(f"Jobs in the workflow: \n{json.dumps(response, indent=4)}")
     logger.info("Checking Vantage jobs")
 
     adstream_upload_list = []
@@ -89,7 +89,6 @@ def check_jobs(job):
             )
             return None
         else:
-            f.write(f"{job_id}\n")
             logger.info(
                 "Job Identifier does not exist in the job list, returning id for processing."
             )
@@ -131,15 +130,16 @@ def create_media_dict(kv_dict):
     if str(path).startswith("T:\\"):
         path = str(path).replace("T:\\", "").replace("\\", "/")
         path = PurePosixPath(root_quan2_posix, path)
-    elif str(path).startswith("\\\\fsis3-smb.bst.espn.pvt\\fsis3\\"):
+    elif str(path).startswith("\\\\fsis3-smb\\fsis3\\"):
         path = (
             str(path)
-            .replace("\\\\fsis3-smb.bst.espn.pvt\\fsis3\\", "")
+            .replace("\\\\fsis3-smb\\fsis3\\", root_fsis3_posix)
             .replace("\\", "/")
         )
         path = PurePosixPath(root_fsis3_posix, path)
 
-    folder = str(path.parent).rsplit("/", 1)[-1]
+    print(f"PATH:  {str(path)}")
+    folder = str(path).rsplit("/")[-2]
 
     logger.info(f"Adstream folder: {folder}\n")
 

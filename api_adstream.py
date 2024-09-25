@@ -17,6 +17,7 @@ root_folder_id = config["Adstream"]["NatGeoPromoExchange"]
 root_fsis3 = Path(config["paths"]["root_fsis3_posix"])
 uploaded_rel_path = Path(config["paths"]["upload_dir_posix"])
 uploaded_dir_path = Path(root_fsis3, uploaded_rel_path)
+script_root = config["paths"]["script_root"]
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,7 @@ def media_complete(vantage_job_id, filepath, **media_params):
         if isinstance(response, dict):
             logger.info(f"Media completion successful for {media_params['filename']}")
             shutil.move(filepath, uploaded_dir_path)
+            write_to_joblist(vantage_job_id)
             return True
         else:
             logger.error(
@@ -245,6 +247,16 @@ def cleanup_media_fail(vantage_job_id, filename):
                 )
             else:
                 file.write(line)
+
+
+def write_to_joblist(vantage_job_id):
+    os.chdir(script_root)
+    job_id_list_path = "/Users/admin/Scripts/AdStream-Uploader/job_id_list.txt"
+
+    with open(job_id_list_path, "a+") as f:
+        f.write(f"{vantage_job_id}\n")
+        logger.info("Job Identifier add to the job_list as completed.")
+        f.close()
 
 
 if __name__ == "__main__":
