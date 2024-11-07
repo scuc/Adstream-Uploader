@@ -204,7 +204,7 @@ def media_complete(vantage_job_id, filepath, **media_params):
         logger.info(f"media_compelte() Response: {json.dumps(response, indent=4)}")
         if isinstance(response, dict):
             logger.info(f"Media completion successful for {media_params['filename']}")
-            shutil.move(filepath, uploaded_dir_path)
+            move_with_rename(filepath, uploaded_dir_path)
             write_to_joblist(vantage_job_id)
             return True
         else:
@@ -219,6 +219,26 @@ def media_complete(vantage_job_id, filepath, **media_params):
         )
         cleanup_media_fail(vantage_job_id, media_params["filename"])
         return False
+
+
+def move_with_rename(src, dst):
+    output_path = os.path.join(dst, os.path.basename(src))
+    print(f"Output Path: {output_path}")
+    if os.path.exists(output_path):
+        base, ext = os.path.splitext(output_path)
+        counter = 1
+        new_dst = f"{base}_{counter}{ext}"
+
+        # Increment the counter until a non-existing filename is found
+        while os.path.exists(new_dst):
+            counter += 1
+            new_dst = f"{base}_{counter}{ext}"
+
+        dst = new_dst  # Update destination to a unique path
+
+    shutil.move(src, dst)
+    logger.info(f"{os.path.basename(src)} moved to {dst}")
+    return
 
 
 def cleanup_media_fail(vantage_job_id, filename):
