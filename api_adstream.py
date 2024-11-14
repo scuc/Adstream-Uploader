@@ -204,9 +204,6 @@ def media_complete(vantage_job_id, filepath, **media_params):
         logger.info(f"media_compelte() Response: {json.dumps(response, indent=4)}")
         if isinstance(response, dict):
             logger.info(f"Media completion successful for {media_params['filename']}")
-            move_with_rename(filepath, uploaded_dir_path)
-            write_to_joblist(vantage_job_id)
-            return True
         else:
             logger.error(
                 f"Unexpected response for {media_params['filename']}: \n: {response.text}"
@@ -219,6 +216,10 @@ def media_complete(vantage_job_id, filepath, **media_params):
         )
         cleanup_media_fail(vantage_job_id, media_params["filename"])
         return False
+
+    move_with_rename(filepath, uploaded_dir_path)
+    write_to_joblist(vantage_job_id)
+    return True
 
 
 def move_with_rename(src, dst):
